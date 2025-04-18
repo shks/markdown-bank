@@ -53,20 +53,49 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-ipcMain.handle('save-file', async (event, { content, suggestedName, directory }) => {
+ipcMain.handle('save-file', async (event, { content, suggestedName, directory, skipDialog }) => {
   try {
-    const { filePath } = await dialog.showSaveDialog({
-      defaultPath: path.join(directory || app.getPath('documents'), suggestedName || 'untitled.md'),
-      filters: [
-        { name: 'Markdown', extensions: ['md'] }
-      ]
-    });
+    let filePath;
     
-    if (filePath) {
+    if (skipDialog) {
+      const today = new Date();
+      const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+      
+      let title = '未タイトル';
+      const headingMatch = content.match(/^#\s+(.+)$/m);
+      if (headingMatch && headingMatch[1]) {
+        title = headingMatch[1].trim().substring(0, 30); // Limit title length
+      } else {
+        const firstLine = content.split('\n')[0];
+        title = firstLine.substring(0, 30);
+      }
+      
+      title = title.replace(/[\\/:*?"<>|]/g, '-');
+      
+      const filename = `${dateStr}-${title}.md`;
+      filePath = path.join(directory || app.getPath('documents'), filename);
+      
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      
       fs.writeFileSync(filePath, content);
       return { success: true, path: filePath };
+    } else {
+      const { filePath: selectedPath } = await dialog.showSaveDialog({
+        defaultPath: path.join(directory || app.getPath('documents'), suggestedName || 'untitled.md'),
+        filters: [
+          { name: 'Markdown', extensions: ['md'] }
+        ]
+      });
+      
+      if (selectedPath) {
+        fs.writeFileSync(selectedPath, content);
+        return { success: true, path: selectedPath };
+      }
+      return { success: false, error: 'No file path selected' };
     }
-    return { success: false, error: 'No file path selected' };
   } catch (error) {
     return { success: false, error: error.message };
   }
