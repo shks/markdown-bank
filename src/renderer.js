@@ -194,7 +194,8 @@ async function saveMarkdownFile(content) {
     const result = await window.electronAPI.saveFile({
       content,
       suggestedName: 'document.md',
-      directory: appSettings.defaultSavePath
+      directory: appSettings.defaultSavePath,
+      skipDialog: true // Skip the save dialog and use the date-title format
     });
     
     if (result.success) {
