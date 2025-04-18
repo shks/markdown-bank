@@ -73,6 +73,15 @@
         <label for="summaryPrompt">音声書き起こしサマリープロンプト:</label>
         <textarea id="summaryPrompt" rows="4" placeholder="音声書き起こしテキストのサマリー作成に使用するプロンプトを入力してください"></textarea>
       </div>
+      <div class="form-group">
+        <label for="llmModel">LLMモデル選択:</label>
+        <select id="llmModel">
+          <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+          <option value="gpt-4o">GPT-4o</option>
+          <option value="gpt-4-turbo">GPT-4 Turbo</option>
+          <option value="gpt-4">GPT-4</option>
+        </select>
+      </div>
       <button id="saveSettingsBtn">保存</button>
     </div>
   </div>

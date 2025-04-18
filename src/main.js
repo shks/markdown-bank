@@ -120,7 +120,7 @@ ipcMain.handle('update-api-key', async (event, apiKey) => {
   return initializeOpenAI(apiKey);
 });
 
-ipcMain.handle('convert-text', async (event, { text, createSummary, summaryPrompt }) => {
+ipcMain.handle('convert-text', async (event, { text, createSummary, summaryPrompt, llmModel }) => {
   if (!openai) {
     return { 
       success: false, 
@@ -168,8 +168,11 @@ ipcMain.handle('convert-text', async (event, { text, createSummary, summaryPromp
       `;
     }
     
+    const modelToUse = llmModel || "gpt-3.5-turbo";
+    console.log(`Using LLM model: ${modelToUse}`);
+    
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: modelToUse,
       messages: [
         { role: "system", content: "あなたはテキストをマークダウン形式に変換する専門家です。" },
         { role: "user", content: prompt }
