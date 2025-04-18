@@ -43,6 +43,7 @@ let appSettings = {
   apiKey: '',
   defaultSavePath: '',
   summaryPrompt: '',
+  llmModel: 'gpt-3.5-turbo',
 };
 
 function loadSettings() {
@@ -58,6 +59,11 @@ function loadSettings() {
       summaryPromptInput.value = appSettings.summaryPrompt;
     } else if (summaryPromptInput) {
       summaryPromptInput.value = '以下は音声書き起こしテキストです。このテキストを要約し、マークダウン形式で整形してください。要約は「# サマリー」セクションに、元のテキストは「# 元の書き起こし」セクションに含めてください。';
+    }
+    
+    const llmModelSelect = document.getElementById('llmModel');
+    if (llmModelSelect && appSettings.llmModel) {
+      llmModelSelect.value = appSettings.llmModel;
     }
     
     if (appSettings.apiKey) {
@@ -76,6 +82,11 @@ async function saveSettings() {
   const summaryPromptInput = document.getElementById('summaryPrompt');
   if (summaryPromptInput) {
     appSettings.summaryPrompt = summaryPromptInput.value;
+  }
+  
+  const llmModelSelect = document.getElementById('llmModel');
+  if (llmModelSelect) {
+    appSettings.llmModel = llmModelSelect.value;
   }
   
   localStorage.setItem('appSettings', JSON.stringify(appSettings));
@@ -179,7 +190,8 @@ async function convertToMarkdown(text, createSummary = false) {
     const result = await window.electronAPI.convertText({
       text,
       createSummary,
-      summaryPrompt: appSettings.summaryPrompt
+      summaryPrompt: appSettings.summaryPrompt,
+      llmModel: appSettings.llmModel
     });
     
     if (result.success) {
