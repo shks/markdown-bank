@@ -120,7 +120,7 @@ ipcMain.handle('update-api-key', async (event, apiKey) => {
   return initializeOpenAI(apiKey);
 });
 
-ipcMain.handle('convert-text', async (event, { text, createSummary }) => {
+ipcMain.handle('convert-text', async (event, { text, createSummary, summaryPrompt }) => {
   if (!openai) {
     return { 
       success: false, 
@@ -147,13 +147,17 @@ ipcMain.handle('convert-text', async (event, { text, createSummary }) => {
         isMarkdown: true
       };
     } else if (isTranscription && createSummary) {
-      prompt = `
-        以下は音声書き起こしテキストです。このテキストを要約し、マークダウン形式で整形してください。
-        要約は「# サマリー」セクションに、元のテキストは「# 元の書き起こし」セクションに含めてください。
-        
-        テキスト:
-        ${text}
-      `;
+      if (summaryPrompt) {
+        prompt = `${summaryPrompt}\n\nテキスト:\n${text}`;
+      } else {
+        prompt = `
+          以下は音声書き起こしテキストです。このテキストを要約し、マークダウン形式で整形してください。
+          要約は「# サマリー」セクションに、元のテキストは「# 元の書き起こし」セクションに含めてください。
+          
+          テキスト:
+          ${text}
+        `;
+      }
     } else {
       prompt = `
         以下のテキストをマークダウン形式に変換してください。

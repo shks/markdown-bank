@@ -16,9 +16,33 @@ const defaultSavePathInput = document.getElementById('defaultSavePath');
 const browsePathBtn = document.getElementById('browsePathBtn');
 const saveSettingsBtn = document.getElementById('saveSettingsBtn');
 
+const notificationContainer = document.createElement('div');
+notificationContainer.className = 'notification-container';
+document.body.appendChild(notificationContainer);
+
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  notification.className = `notification ${type}`;
+  notification.textContent = message;
+  
+  notificationContainer.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.classList.add('show');
+  }, 10);
+  
+  setTimeout(() => {
+    notification.classList.remove('show');
+    setTimeout(() => {
+      notificationContainer.removeChild(notification);
+    }, 300);
+  }, 3000);
+}
+
 let appSettings = {
   apiKey: '',
   defaultSavePath: '',
+  summaryPrompt: '',
 };
 
 function loadSettings() {
@@ -28,6 +52,13 @@ function loadSettings() {
     apiKeyInput.value = appSettings.apiKey;
     defaultSavePathInput.value = appSettings.defaultSavePath;
     savePath.textContent = appSettings.defaultSavePath || '未設定';
+    
+    const summaryPromptInput = document.getElementById('summaryPrompt');
+    if (summaryPromptInput && appSettings.summaryPrompt) {
+      summaryPromptInput.value = appSettings.summaryPrompt;
+    } else if (summaryPromptInput) {
+      summaryPromptInput.value = '以下は音声書き起こしテキストです。このテキストを要約し、マークダウン形式で整形してください。要約は「# サマリー」セクションに、元のテキストは「# 元の書き起こし」セクションに含めてください。';
+    }
     
     if (appSettings.apiKey) {
       apiKeyStatus.textContent = 'API設定済み';
@@ -41,6 +72,12 @@ function loadSettings() {
 async function saveSettings() {
   appSettings.apiKey = apiKeyInput.value;
   appSettings.defaultSavePath = defaultSavePathInput.value;
+  
+  const summaryPromptInput = document.getElementById('summaryPrompt');
+  if (summaryPromptInput) {
+    appSettings.summaryPrompt = summaryPromptInput.value;
+  }
+  
   localStorage.setItem('appSettings', JSON.stringify(appSettings));
   
   savePath.textContent = appSettings.defaultSavePath || '未設定';
@@ -51,15 +88,17 @@ async function saveSettings() {
     if (result.success) {
       apiKeyStatus.textContent = 'API設定済み';
       apiKeyStatus.classList.add('connected');
+      showNotification('設定を保存しました', 'success');
     } else {
       apiKeyStatus.textContent = 'APIエラー';
       apiKeyStatus.classList.remove('connected');
       apiKeyStatus.classList.add('error');
-      alert(`APIキーの設定に失敗しました: ${result.error}`);
+      showNotification(`APIキーの設定に失敗しました: ${result.error}`, 'error');
     }
   } else {
     apiKeyStatus.textContent = 'API未設定';
     apiKeyStatus.classList.remove('connected');
+    showNotification('設定を保存しました', 'success');
   }
   
   settingsModal.style.display = 'none';
@@ -130,6 +169,7 @@ function renderMarkdown(text) {
 async function convertToMarkdown(text, createSummary = false) {
   if (!appSettings.apiKey) {
     previewContent.innerHTML = '<p class="error">OpenAI APIキーが設定されていません。設定から追加してください。</p>';
+    showNotification('OpenAI APIキーが設定されていません', 'error');
     return null;
   }
   
@@ -138,17 +178,21 @@ async function convertToMarkdown(text, createSummary = false) {
   try {
     const result = await window.electronAPI.convertText({
       text,
-      createSummary
+      createSummary,
+      summaryPrompt: appSettings.summaryPrompt
     });
     
     if (result.success) {
+      showNotification('テキストを変換しました', 'success');
       return result.result;
     } else {
       previewContent.innerHTML = `<p class="error">変換に失敗しました: ${result.error}</p>`;
+      showNotification('変換に失敗しました', 'error');
       return null;
     }
   } catch (error) {
     previewContent.innerHTML = `<p class="error">エラーが発生しました: ${error.message}</p>`;
+    showNotification('エラーが発生しました', 'error');
     return null;
   }
 }
@@ -186,7 +230,7 @@ function simulateMarkdownConversion(text) {
 
 async function saveMarkdownFile(content) {
   if (!content) {
-    alert('保存するコンテンツがありません。');
+    showNotification('保存するコンテンツがありません。', 'error');
     return;
   }
   
@@ -199,11 +243,14 @@ async function saveMarkdownFile(content) {
     });
     
     if (result.success) {
+      showNotification(`ファイルを保存しました: ${result.path.split('/').pop()}`, 'success');
       previewContent.innerHTML += `<p class="success">ファイルを保存しました: ${result.path}</p>`;
     } else {
+      showNotification('保存に失敗しました', 'error');
       previewContent.innerHTML += `<p class="error">保存に失敗しました: ${result.error}</p>`;
     }
   } catch (error) {
+    showNotification('エラーが発生しました', 'error');
     previewContent.innerHTML += `<p class="error">エラーが発生しました: ${error.message}</p>`;
   }
 }
