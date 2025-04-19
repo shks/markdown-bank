@@ -82,6 +82,21 @@
           <option value="gpt-4">GPT-4</option>
         </select>
       </div>
+      <div class="form-group">
+        <h3>Notion連携設定</h3>
+        <label for="notionApiKey">Notion API キー:</label>
+        <input type="password" id="notionApiKey" placeholder="secret_...">
+      </div>
+      <div class="form-group">
+        <label for="notionDatabaseId">Notionデータベース ID:</label>
+        <input type="text" id="notionDatabaseId" placeholder="データベースID">
+      </div>
+      <div class="form-group">
+        <label class="checkbox-container">
+          <input type="checkbox" id="enableNotionSync">
+          <span>Notionへの同期を有効にする</span>
+        </label>
+      </div>
       <button id="saveSettingsBtn">保存</button>
     </div>
   </div>
