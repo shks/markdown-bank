@@ -279,44 +279,54 @@ ipcMain.handle('save-to-notion', async (event, { content, notionApiKey, notionDa
       }
     }
     
-    const MAX_CHUNK_SIZE = 1900;
-    const contentChunks = [];
+    const MAX_BLOCK_SIZE = 1900; // Leave some buffer
+    const blocks = [];
     
     const paragraphs = content.split('\n\n');
-    let currentChunk = '';
     
     for (const paragraph of paragraphs) {
-      if (currentChunk.length + paragraph.length + 2 > MAX_CHUNK_SIZE) {
-        if (currentChunk.length > 0) {
-          contentChunks.push(currentChunk);
-        }
-        
-        if (paragraph.length > MAX_CHUNK_SIZE) {
-          let remainingParagraph = paragraph;
-          while (remainingParagraph.length > 0) {
-            const chunkSize = Math.min(remainingParagraph.length, MAX_CHUNK_SIZE);
-            contentChunks.push(remainingParagraph.substring(0, chunkSize));
-            remainingParagraph = remainingParagraph.substring(chunkSize);
-          }
-          currentChunk = '';
-        } else {
-          currentChunk = paragraph;
-        }
+      if (paragraph.length <= MAX_BLOCK_SIZE) {
+        blocks.push(paragraph);
       } else {
-        if (currentChunk.length > 0) {
-          currentChunk += '\n\n';
+        let remainingText = paragraph;
+        
+        while (remainingText.length > 0) {
+          if (remainingText.length <= MAX_BLOCK_SIZE) {
+            blocks.push(remainingText);
+            break;
+          }
+          
+          let splitIndex = MAX_BLOCK_SIZE;
+          
+          const sentenceEndMarkers = ['. ', '。', '! ', '? ', '！ ', '？ '];
+          let bestEndIndex = -1;
+          
+          for (const marker of sentenceEndMarkers) {
+            let lastIndex = -1;
+            let tempIndex = -1;
+            
+            while ((tempIndex = remainingText.indexOf(marker, tempIndex + 1)) !== -1 && tempIndex < MAX_BLOCK_SIZE) {
+              lastIndex = tempIndex;
+            }
+            
+            if (lastIndex > bestEndIndex) {
+              bestEndIndex = lastIndex + marker.length;
+            }
+          }
+          
+          if (bestEndIndex > 0) {
+            splitIndex = bestEndIndex;
+          }
+          
+          blocks.push(remainingText.substring(0, splitIndex));
+          remainingText = remainingText.substring(splitIndex);
         }
-        currentChunk += paragraph;
       }
     }
     
-    if (currentChunk.length > 0) {
-      contentChunks.push(currentChunk);
-    }
+    console.log(`Split content into ${blocks.length} blocks for Notion API compatibility`);
     
-    console.log(`Split content into ${contentChunks.length} chunks`);
-    
-    const children = contentChunks.map(chunk => ({
+    const children = blocks.map(block => ({
       object: 'block',
       type: 'paragraph',
       paragraph: {
@@ -324,7 +334,7 @@ ipcMain.handle('save-to-notion', async (event, { content, notionApiKey, notionDa
           {
             type: 'text',
             text: {
-              content: chunk
+              content: block
             }
           }
         ]
