@@ -99,15 +99,18 @@ button:hover {
 }
 
 /* Large save button style */
-#saveBtn {
+#saveBtn, .large-button {
   background-color: var(--success-color);
-  font-size: 16px;
-  padding: 10px 24px;
+  font-size: 18px;
+  padding: 12px 30px;
   font-weight: bold;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  min-width: 120px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-#saveBtn:hover {
+#saveBtn:hover, .large-button:hover {
   background-color: #3d8b40;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
