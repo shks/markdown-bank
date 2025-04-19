@@ -121,12 +121,13 @@ ipcMain.handle('update-api-key', async (event, apiKey) => {
   return initializeOpenAI(apiKey);
 });
 
-ipcMain.handle('convert-text', async (event, { text, createSummary, summaryPrompt, llmModel }) => {
+ipcMain.handle('convert-text', async (event, { text, createSummary, summaryPrompt, llmModel, currentMode }) => {
   console.log('convert-text IPC handler called with:', { 
     textLength: text.length, 
     createSummary, 
     hasSummaryPrompt: !!summaryPrompt,
-    llmModel 
+    llmModel,
+    currentMode
   });
   
   if (!openai) {
@@ -138,16 +139,17 @@ ipcMain.handle('convert-text', async (event, { text, createSummary, summaryPromp
   }
   
   try {
-    const isMarkdown = text.includes('#') || 
+    const isMarkdown = currentMode === 'markdown' && (
+                       text.includes('#') || 
                        text.includes('**') || 
                        text.includes('__') ||
                        text.includes('```') ||
                        text.includes('- ') ||
-                       text.includes('1. ');
+                       text.includes('1. '));
     
     const isTranscription = /(\[\d{2}:\d{2}\]|\(\d{2}:\d{2}\)|話者[A-Z]:|Speaker [A-Z]:)/.test(text);
     
-    console.log('Text analysis:', { isMarkdown, isTranscription, createSummary });
+    console.log('Text analysis:', { isMarkdown, isTranscription, createSummary, currentMode });
     
     let prompt;
     

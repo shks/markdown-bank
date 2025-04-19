@@ -218,7 +218,7 @@ function renderMarkdown(text) {
 }
 
 async function convertToMarkdown(text, createSummary = false) {
-  console.log('convertToMarkdown called with:', { textLength: text.length, createSummary });
+  console.log('convertToMarkdown called with:', { textLength: text.length, createSummary, currentMode });
   
   if (!appSettings.apiKey) {
     previewContent.innerHTML = '<p class="error">OpenAI APIキーが設定されていません。設定から追加してください。</p>';
@@ -233,14 +233,16 @@ async function convertToMarkdown(text, createSummary = false) {
       textPreview: text.substring(0, 100), 
       createSummary, 
       summaryPrompt: appSettings.summaryPrompt ? appSettings.summaryPrompt.substring(0, 50) + '...' : null,
-      llmModel: appSettings.llmModel
+      llmModel: appSettings.llmModel,
+      currentMode
     });
     
     const result = await window.electronAPI.convertText({
       text,
       createSummary,
       summaryPrompt: appSettings.summaryPrompt,
-      llmModel: appSettings.llmModel
+      llmModel: appSettings.llmModel,
+      currentMode
     });
     
     console.log('Received from main process:', { success: result.success, resultLength: result.result ? result.result.length : 0 });
