@@ -14,6 +14,11 @@
     </header>
     
     <main>
+      <div class="mode-selector">
+        <button id="markdownModeBtn" class="mode-btn active">マークダウンモード</button>
+        <button id="textModeBtn" class="mode-btn">テキストモード</button>
+      </div>
+      
       <section class="drop-area" id="dropArea">
         <div class="drop-message">
           <p>ファイルをドラッグ＆ドロップ</p>
@@ -22,21 +27,12 @@
         </div>
       </section>
       
-      <div class="mode-selector">
-        <button id="markdownModeBtn" class="mode-btn active">マークダウンモード</button>
-        <button id="textModeBtn" class="mode-btn">テキストモード</button>
-      </div>
-      
       <section class="text-input-area">
         <h2 id="inputTitle">テキスト入力</h2>
         <textarea id="textInput" placeholder="ここにテキストを入力してください..."></textarea>
         <div class="controls">
           <div id="textModeControls" style="display: none;">
             <button id="convertBtn">マークダウンに変換</button>
-            <label class="checkbox-container">
-              <input type="checkbox" id="summaryOption">
-              <span>音声書き起こしの場合、サマリーを作成</span>
-            </label>
           </div>
           <button id="saveBtn">保存</button>
         </div>
