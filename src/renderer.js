@@ -15,6 +15,10 @@ const apiKeyInput = document.getElementById('apiKey');
 const defaultSavePathInput = document.getElementById('defaultSavePath');
 const browsePathBtn = document.getElementById('browsePathBtn');
 const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+const markdownModeBtn = document.getElementById('markdownModeBtn');
+const textModeBtn = document.getElementById('textModeBtn');
+const textModeControls = document.getElementById('textModeControls');
+const inputTitle = document.getElementById('inputTitle');
 
 const notificationContainer = document.createElement('div');
 notificationContainer.className = 'notification-container';
@@ -170,11 +174,18 @@ async function handleFiles(files) {
       textInput.value = content;
       
       if (isMarkdownFile(file.name)) {
+        setAppMode('markdown');
         previewContent.innerHTML = '<p>マークダウンファイルを読み込みました。変換は不要です。</p>';
         previewContent.innerHTML += `<div class="markdown-preview">${marked.parse(content)}</div>`;
       } else {
+        setAppMode('text');
         previewContent.innerHTML = '<p>非マークダウンファイルを読み込みました。変換が必要です。</p>';
-        convertBtn.click(); // Trigger conversion
+        
+        if (summaryOption.checked) {
+          previewContent.innerHTML += '<p>「マークダウンに変換」ボタンをクリックして、サマリー付きのマークダウンに変換できます。</p>';
+        } else {
+          previewContent.innerHTML += '<p>「マークダウンに変換」ボタンをクリックして、マークダウンに変換できます。</p>';
+        }
       }
     } catch (error) {
       previewContent.innerHTML = `<p class="error">ファイルの読み込みに失敗しました: ${error.message}</p>`;
@@ -332,6 +343,26 @@ async function selectDirectory() {
   }
 }
 
+let currentMode = 'markdown';
+
+function setAppMode(mode) {
+  currentMode = mode;
+  
+  if (mode === 'markdown') {
+    markdownModeBtn.classList.add('active');
+    textModeBtn.classList.remove('active');
+    textModeControls.style.display = 'none';
+    inputTitle.textContent = 'マークダウン入力';
+    textInput.placeholder = 'ここにマークダウンを入力してください...';
+  } else {
+    markdownModeBtn.classList.remove('active');
+    textModeBtn.classList.add('active');
+    textModeControls.style.display = 'flex';
+    inputTitle.textContent = 'テキスト入力';
+    textInput.placeholder = 'ここにテキストを入力してください...';
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   marked.setOptions({
     breaks: true,
@@ -340,6 +371,15 @@ document.addEventListener('DOMContentLoaded', () => {
   
   loadSettings();
   initDragAndDrop();
+  setAppMode('markdown'); // デフォルトはマークダウンモード
+  
+  markdownModeBtn.addEventListener('click', () => {
+    setAppMode('markdown');
+  });
+  
+  textModeBtn.addEventListener('click', () => {
+    setAppMode('text');
+  });
   
   fileSelectBtn.addEventListener('click', () => {
     const input = document.createElement('input');
@@ -372,14 +412,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
-  saveBtn.addEventListener('click', () => {
+  saveBtn.addEventListener('click', async () => {
     const text = textInput.value.trim();
     if (!text) {
       previewContent.innerHTML = '<p class="error">保存するテキストがありません。</p>';
       return;
     }
     
-    saveMarkdownFile(text);
+    if (currentMode === 'text' && !text.includes('#') && !text.includes('**') && !text.includes('```')) {
+      const createSummary = summaryOption.checked;
+      const markdownContent = await convertToMarkdown(text, createSummary);
+      
+      if (markdownContent) {
+        previewContent.innerHTML = `<div class="markdown-preview">${marked.parse(markdownContent)}</div>`;
+        textInput.value = markdownContent;
+        saveMarkdownFile(markdownContent);
+      }
+    } else {
+      saveMarkdownFile(text);
+    }
   });
   
   settingsBtn.addEventListener('click', () => {
