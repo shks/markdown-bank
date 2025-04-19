@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   updateApiKey: (apiKey) => ipcRenderer.invoke('update-api-key', apiKey),
   convertText: (data) => ipcRenderer.invoke('convert-text', data),
+  saveToNotion: (data) => ipcRenderer.invoke('save-to-notion', data),
   
   handleFileDrop: (callback) => {
     document.addEventListener('drop', (event) => {

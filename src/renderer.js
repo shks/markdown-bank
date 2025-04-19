@@ -44,6 +44,9 @@ let appSettings = {
   defaultSavePath: '',
   summaryPrompt: '',
   llmModel: 'gpt-3.5-turbo',
+  notionApiKey: '',
+  notionDatabaseId: '',
+  enableNotionSync: false,
 };
 
 function loadSettings() {
@@ -64,6 +67,21 @@ function loadSettings() {
     const llmModelSelect = document.getElementById('llmModel');
     if (llmModelSelect && appSettings.llmModel) {
       llmModelSelect.value = appSettings.llmModel;
+    }
+    
+    const notionApiKeyInput = document.getElementById('notionApiKey');
+    if (notionApiKeyInput && appSettings.notionApiKey) {
+      notionApiKeyInput.value = appSettings.notionApiKey;
+    }
+    
+    const notionDatabaseIdInput = document.getElementById('notionDatabaseId');
+    if (notionDatabaseIdInput && appSettings.notionDatabaseId) {
+      notionDatabaseIdInput.value = appSettings.notionDatabaseId;
+    }
+    
+    const enableNotionSyncCheckbox = document.getElementById('enableNotionSync');
+    if (enableNotionSyncCheckbox) {
+      enableNotionSyncCheckbox.checked = appSettings.enableNotionSync || false;
     }
     
     if (appSettings.apiKey) {
@@ -87,6 +105,21 @@ async function saveSettings() {
   const llmModelSelect = document.getElementById('llmModel');
   if (llmModelSelect) {
     appSettings.llmModel = llmModelSelect.value;
+  }
+  
+  const notionApiKeyInput = document.getElementById('notionApiKey');
+  if (notionApiKeyInput) {
+    appSettings.notionApiKey = notionApiKeyInput.value;
+  }
+  
+  const notionDatabaseIdInput = document.getElementById('notionDatabaseId');
+  if (notionDatabaseIdInput) {
+    appSettings.notionDatabaseId = notionDatabaseIdInput.value;
+  }
+  
+  const enableNotionSyncCheckbox = document.getElementById('enableNotionSync');
+  if (enableNotionSyncCheckbox) {
+    appSettings.enableNotionSync = enableNotionSyncCheckbox.checked;
   }
   
   localStorage.setItem('appSettings', JSON.stringify(appSettings));
@@ -254,9 +287,29 @@ async function saveMarkdownFile(content) {
       skipDialog: true // Skip the save dialog and use the date-title format
     });
     
+    let notionResult = { success: true };
+    
+    if (appSettings.enableNotionSync && appSettings.notionApiKey && appSettings.notionDatabaseId) {
+      notionResult = await window.electronAPI.saveToNotion({
+        content,
+        notionApiKey: appSettings.notionApiKey,
+        notionDatabaseId: appSettings.notionDatabaseId
+      });
+      
+      if (!notionResult.success) {
+        showNotification(`Notionへの保存に失敗しました: ${notionResult.error}`, 'error');
+      } else {
+        showNotification('Notionデータベースに保存しました', 'success');
+      }
+    }
+    
     if (result.success) {
       showNotification(`ファイルを保存しました: ${result.path.split('/').pop()}`, 'success');
       previewContent.innerHTML += `<p class="success">ファイルを保存しました: ${result.path}</p>`;
+      
+      if (appSettings.enableNotionSync && notionResult.success) {
+        previewContent.innerHTML += `<p class="success">Notionデータベースにも保存しました</p>`;
+      }
     } else {
       showNotification('保存に失敗しました', 'error');
       previewContent.innerHTML += `<p class="error">保存に失敗しました: ${result.error}</p>`;

@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { OpenAI } = require('openai');
+const { Client } = require('@notionhq/client');
 require('dotenv').config();
 
 let mainWindow;
@@ -191,6 +192,80 @@ ipcMain.handle('convert-text', async (event, { text, createSummary, summaryPromp
     return { 
       success: false, 
       error: `OpenAI API エラー: ${error.message}` 
+    };
+  }
+});
+ipcMain.handle('save-to-notion', async (event, { content, notionApiKey, notionDatabaseId }) => {
+  try {
+    if (!notionApiKey || !notionDatabaseId) {
+      return { 
+        success: false, 
+        error: 'Notion API key or database ID is missing.' 
+      };
+    }
+    
+    const notion = new Client({ 
+      auth: notionApiKey 
+    });
+    
+    let title = '未タイトル';
+    const headingMatch = content.match(/^#\s+(.+)$/m);
+    if (headingMatch && headingMatch[1]) {
+      title = headingMatch[1].trim().substring(0, 100); // Limit title length
+    } else {
+      const firstLine = content.split('\n')[0];
+      title = firstLine.substring(0, 100);
+    }
+    
+    const response = await notion.pages.create({
+      parent: {
+        database_id: notionDatabaseId
+      },
+      properties: {
+        'タイトル': {
+          title: [
+            {
+              text: {
+                content: title
+              }
+            }
+          ]
+        },
+        '作成日': {
+          date: {
+            start: new Date().toISOString()
+          }
+        }
+      },
+      children: [
+        {
+          object: 'block',
+          type: 'paragraph',
+          paragraph: {
+            rich_text: [
+              {
+                type: 'text',
+                text: {
+                  content: content
+                }
+              }
+            ]
+          }
+        }
+      ]
+    });
+    
+    console.log('Notion page created:', response.id);
+    return { 
+      success: true, 
+      pageId: response.id,
+      pageUrl: `https://notion.so/${response.id.replace(/-/g, '')}`
+    };
+  } catch (error) {
+    console.error('Notion API error:', error);
+    return { 
+      success: false, 
+      error: `Notion API エラー: ${error.message}` 
     };
   }
 });
