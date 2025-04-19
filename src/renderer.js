@@ -317,7 +317,8 @@ async function saveMarkdownFile(content) {
       notionResult = await window.electronAPI.saveToNotion({
         content,
         notionApiKey: appSettings.notionApiKey,
-        notionDatabaseId: appSettings.notionDatabaseId
+        notionDatabaseId: appSettings.notionDatabaseId,
+        llmModel: appSettings.llmModel
       });
       
       if (!notionResult.success) {

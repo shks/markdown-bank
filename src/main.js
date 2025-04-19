@@ -212,7 +212,44 @@ ipcMain.handle('convert-text', async (event, { text, createSummary, summaryPromp
     };
   }
 });
-ipcMain.handle('save-to-notion', async (event, { content, notionApiKey, notionDatabaseId }) => {
+async function generateTitleWithAI(content, llmModel = "gpt-3.5-turbo") {
+  if (!openai) {
+    console.error('OpenAI API not initialized for title generation');
+    return null;
+  }
+  
+  try {
+    console.log('Generating title with AI...');
+    
+    const prompt = `
+      以下のマークダウンテキストの内容を適切に表現する、簡潔で分かりやすいタイトルを生成してください。
+      タイトルは30文字以内で、内容を一目で理解できるものにしてください。
+      タイトルのみを返してください。
+
+      テキスト:
+      ${content.substring(0, 1500)} /* 長すぎる場合は先頭部分のみ使用 */
+    `;
+    
+    const completion = await openai.chat.completions.create({
+      model: llmModel,
+      messages: [
+        { role: "system", content: "あなたは文章の内容を適切に表現するタイトルを生成する専門家です。" },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 50
+    });
+    
+    const generatedTitle = completion.choices[0].message.content.trim();
+    console.log('AI generated title:', generatedTitle);
+    return generatedTitle;
+  } catch (error) {
+    console.error('Title generation error:', error);
+    return null;
+  }
+}
+
+ipcMain.handle('save-to-notion', async (event, { content, notionApiKey, notionDatabaseId, llmModel }) => {
   try {
     if (!notionApiKey || !notionDatabaseId) {
       return { 
@@ -225,13 +262,17 @@ ipcMain.handle('save-to-notion', async (event, { content, notionApiKey, notionDa
       auth: notionApiKey 
     });
     
-    let title = '未タイトル';
-    const headingMatch = content.match(/^#\s+(.+)$/m);
-    if (headingMatch && headingMatch[1]) {
-      title = headingMatch[1].trim().substring(0, 100); // Limit title length
-    } else {
-      const firstLine = content.split('\n')[0];
-      title = firstLine.substring(0, 100);
+    let title = await generateTitleWithAI(content, llmModel);
+    
+    if (!title) {
+      console.log('Falling back to heading or first line for title');
+      const headingMatch = content.match(/^#\s+(.+)$/m);
+      if (headingMatch && headingMatch[1]) {
+        title = headingMatch[1].trim().substring(0, 100); // Limit title length
+      } else {
+        const firstLine = content.split('\n')[0];
+        title = firstLine.substring(0, 100);
+      }
     }
     
     const response = await notion.pages.create({
