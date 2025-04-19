@@ -239,7 +239,7 @@ ipcMain.handle('save-to-notion', async (event, { content, notionApiKey, notionDa
         database_id: notionDatabaseId
       },
       properties: {
-        'タイトル': {
+        'Name': {
           title: [
             {
               text: {
@@ -247,11 +247,6 @@ ipcMain.handle('save-to-notion', async (event, { content, notionApiKey, notionDa
               }
             }
           ]
-        },
-        '作成日': {
-          date: {
-            start: new Date().toISOString()
-          }
         }
       },
       children: [
