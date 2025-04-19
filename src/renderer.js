@@ -181,11 +181,7 @@ async function handleFiles(files) {
         setAppMode('text');
         previewContent.innerHTML = '<p>非マークダウンファイルを読み込みました。変換が必要です。</p>';
         
-        if (summaryOption.checked) {
-          previewContent.innerHTML += '<p>「マークダウンに変換」ボタンをクリックして、サマリー付きのマークダウンに変換できます。</p>';
-        } else {
-          previewContent.innerHTML += '<p>「マークダウンに変換」ボタンをクリックして、マークダウンに変換できます。</p>';
-        }
+        previewContent.innerHTML += '<p>「マークダウンに変換」ボタンをクリックして、マークダウンに変換できます。</p>';
       }
     } catch (error) {
       previewContent.innerHTML = `<p class="error">ファイルの読み込みに失敗しました: ${error.message}</p>`;
@@ -403,8 +399,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    const createSummary = summaryOption.checked;
-    const markdownContent = await convertToMarkdown(text, createSummary);
+    const isTranscript = isTranscriptionText(text);
+    const markdownContent = await convertToMarkdown(text, isTranscript);
     
     if (markdownContent) {
       previewContent.innerHTML = `<div class="markdown-preview">${marked.parse(markdownContent)}</div>`;
@@ -420,8 +416,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     if (currentMode === 'text' && !text.includes('#') && !text.includes('**') && !text.includes('```')) {
-      const createSummary = summaryOption.checked;
-      const markdownContent = await convertToMarkdown(text, createSummary);
+      const isTranscript = isTranscriptionText(text);
+      const markdownContent = await convertToMarkdown(text, isTranscript);
       
       if (markdownContent) {
         previewContent.innerHTML = `<div class="markdown-preview">${marked.parse(markdownContent)}</div>`;
