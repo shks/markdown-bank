@@ -54,7 +54,7 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-ipcMain.handle('save-file', async (event, { content, suggestedName, directory, skipDialog }) => {
+ipcMain.handle('save-file', async (event, { content, suggestedName, directory, skipDialog, llmModel }) => {
   try {
     let filePath;
     
@@ -62,13 +62,17 @@ ipcMain.handle('save-file', async (event, { content, suggestedName, directory, s
       const today = new Date();
       const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
       
-      let title = '未タイトル';
-      const headingMatch = content.match(/^#\s+(.+)$/m);
-      if (headingMatch && headingMatch[1]) {
-        title = headingMatch[1].trim().substring(0, 30); // Limit title length
-      } else {
-        const firstLine = content.split('\n')[0];
-        title = firstLine.substring(0, 30);
+      let title = await generateTitleWithAI(content, llmModel);
+      
+      if (!title) {
+        console.log('Falling back to heading or first line for local file title');
+        const headingMatch = content.match(/^#\s+(.+)$/m);
+        if (headingMatch && headingMatch[1]) {
+          title = headingMatch[1].trim().substring(0, 30); // Limit title length
+        } else {
+          const firstLine = content.split('\n')[0];
+          title = firstLine.substring(0, 30);
+        }
       }
       
       title = title.replace(/[\\/:*?"<>|]/g, '-');

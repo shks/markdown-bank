@@ -308,7 +308,8 @@ async function saveMarkdownFile(content) {
       content,
       suggestedName: 'document.md',
       directory: appSettings.defaultSavePath,
-      skipDialog: true // Skip the save dialog and use the date-title format
+      skipDialog: true, // Skip the save dialog and use the date-title format
+      llmModel: appSettings.llmModel
     });
     
     let notionResult = { success: true };
