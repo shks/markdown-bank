@@ -218,6 +218,8 @@ function renderMarkdown(text) {
 }
 
 async function convertToMarkdown(text, createSummary = false) {
+  console.log('convertToMarkdown called with:', { textLength: text.length, createSummary });
+  
   if (!appSettings.apiKey) {
     previewContent.innerHTML = '<p class="error">OpenAI APIキーが設定されていません。設定から追加してください。</p>';
     showNotification('OpenAI APIキーが設定されていません', 'error');
@@ -227,6 +229,13 @@ async function convertToMarkdown(text, createSummary = false) {
   previewContent.innerHTML = '<p>変換中...</p>';
   
   try {
+    console.log('Sending to main process:', { 
+      textPreview: text.substring(0, 100), 
+      createSummary, 
+      summaryPrompt: appSettings.summaryPrompt ? appSettings.summaryPrompt.substring(0, 50) + '...' : null,
+      llmModel: appSettings.llmModel
+    });
+    
     const result = await window.electronAPI.convertText({
       text,
       createSummary,
@@ -234,17 +243,21 @@ async function convertToMarkdown(text, createSummary = false) {
       llmModel: appSettings.llmModel
     });
     
+    console.log('Received from main process:', { success: result.success, resultLength: result.result ? result.result.length : 0 });
+    
     if (result.success) {
       showNotification('テキストを変換しました', 'success');
       return result.result;
     } else {
       previewContent.innerHTML = `<p class="error">変換に失敗しました: ${result.error}</p>`;
       showNotification('変換に失敗しました', 'error');
+      console.error('Conversion error:', result.error);
       return null;
     }
   } catch (error) {
     previewContent.innerHTML = `<p class="error">エラーが発生しました: ${error.message}</p>`;
     showNotification('エラーが発生しました', 'error');
+    console.error('Exception in convertToMarkdown:', error);
     return null;
   }
 }
@@ -257,7 +270,9 @@ function isTranscriptionText(text) {
     /Speaker [A-Z]:/    // Speaker A: format
   ];
   
-  return transcriptionPatterns.some(pattern => pattern.test(text));
+  const result = transcriptionPatterns.some(pattern => pattern.test(text));
+  console.log('isTranscriptionText check:', { text: text.substring(0, 100), result });
+  return result;
 }
 
 function simulateTranscriptionSummary(text) {
@@ -393,38 +408,56 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   convertBtn.addEventListener('click', async () => {
+    console.log('Convert button clicked');
     const text = textInput.value.trim();
     if (!text) {
       previewContent.innerHTML = '<p class="error">テキストを入力してください。</p>';
+      console.log('No text to convert');
       return;
     }
     
     const isTranscript = isTranscriptionText(text);
+    console.log('Before conversion:', { isTranscript });
     const markdownContent = await convertToMarkdown(text, isTranscript);
+    console.log('After conversion:', { success: !!markdownContent, contentLength: markdownContent ? markdownContent.length : 0 });
     
     if (markdownContent) {
       previewContent.innerHTML = `<div class="markdown-preview">${marked.parse(markdownContent)}</div>`;
       textInput.value = markdownContent; // Update text area with converted content
+      console.log('Preview and text input updated with converted content');
     }
   });
   
   saveBtn.addEventListener('click', async () => {
+    console.log('Save button clicked');
     const text = textInput.value.trim();
     if (!text) {
       previewContent.innerHTML = '<p class="error">保存するテキストがありません。</p>';
+      console.log('No text to save');
       return;
     }
     
+    console.log('Current mode:', currentMode);
+    console.log('Text contains markdown:', { 
+      hasHeadings: text.includes('#'), 
+      hasBold: text.includes('**'), 
+      hasCodeBlock: text.includes('```') 
+    });
+    
     if (currentMode === 'text' && !text.includes('#') && !text.includes('**') && !text.includes('```')) {
       const isTranscript = isTranscriptionText(text);
+      console.log('Before save conversion:', { isTranscript });
       const markdownContent = await convertToMarkdown(text, isTranscript);
+      console.log('After save conversion:', { success: !!markdownContent, contentLength: markdownContent ? markdownContent.length : 0 });
       
       if (markdownContent) {
         previewContent.innerHTML = `<div class="markdown-preview">${marked.parse(markdownContent)}</div>`;
         textInput.value = markdownContent;
+        console.log('Preview and text input updated with converted content before save');
         saveMarkdownFile(markdownContent);
       }
     } else {
+      console.log('Saving without conversion (already markdown or in markdown mode)');
       saveMarkdownFile(text);
     }
   });
