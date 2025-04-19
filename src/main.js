@@ -279,6 +279,58 @@ ipcMain.handle('save-to-notion', async (event, { content, notionApiKey, notionDa
       }
     }
     
+    const MAX_CHUNK_SIZE = 1900;
+    const contentChunks = [];
+    
+    const paragraphs = content.split('\n\n');
+    let currentChunk = '';
+    
+    for (const paragraph of paragraphs) {
+      if (currentChunk.length + paragraph.length + 2 > MAX_CHUNK_SIZE) {
+        if (currentChunk.length > 0) {
+          contentChunks.push(currentChunk);
+        }
+        
+        if (paragraph.length > MAX_CHUNK_SIZE) {
+          let remainingParagraph = paragraph;
+          while (remainingParagraph.length > 0) {
+            const chunkSize = Math.min(remainingParagraph.length, MAX_CHUNK_SIZE);
+            contentChunks.push(remainingParagraph.substring(0, chunkSize));
+            remainingParagraph = remainingParagraph.substring(chunkSize);
+          }
+          currentChunk = '';
+        } else {
+          currentChunk = paragraph;
+        }
+      } else {
+        if (currentChunk.length > 0) {
+          currentChunk += '\n\n';
+        }
+        currentChunk += paragraph;
+      }
+    }
+    
+    if (currentChunk.length > 0) {
+      contentChunks.push(currentChunk);
+    }
+    
+    console.log(`Split content into ${contentChunks.length} chunks`);
+    
+    const children = contentChunks.map(chunk => ({
+      object: 'block',
+      type: 'paragraph',
+      paragraph: {
+        rich_text: [
+          {
+            type: 'text',
+            text: {
+              content: chunk
+            }
+          }
+        ]
+      }
+    }));
+    
     const response = await notion.pages.create({
       parent: {
         database_id: notionDatabaseId
@@ -294,22 +346,7 @@ ipcMain.handle('save-to-notion', async (event, { content, notionApiKey, notionDa
           ]
         }
       },
-      children: [
-        {
-          object: 'block',
-          type: 'paragraph',
-          paragraph: {
-            rich_text: [
-              {
-                type: 'text',
-                text: {
-                  content: content
-                }
-              }
-            ]
-          }
-        }
-      ]
+      children: children
     });
     
     console.log('Notion page created:', response.id);
@@ -322,7 +359,7 @@ ipcMain.handle('save-to-notion', async (event, { content, notionApiKey, notionDa
     console.error('Notion API error:', error);
     return { 
       success: false, 
-      error: `Notion API エラー: ${error.message}` 
+      error: `Notion API error: ${error.message}` 
     };
   }
 });
