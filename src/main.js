@@ -122,7 +122,15 @@ ipcMain.handle('update-api-key', async (event, apiKey) => {
 });
 
 ipcMain.handle('convert-text', async (event, { text, createSummary, summaryPrompt, llmModel }) => {
+  console.log('convert-text IPC handler called with:', { 
+    textLength: text.length, 
+    createSummary, 
+    hasSummaryPrompt: !!summaryPrompt,
+    llmModel 
+  });
+  
   if (!openai) {
+    console.error('OpenAI API not initialized');
     return { 
       success: false, 
       error: 'OpenAI API not initialized. Please check your API key.' 
@@ -139,17 +147,22 @@ ipcMain.handle('convert-text', async (event, { text, createSummary, summaryPromp
     
     const isTranscription = /(\[\d{2}:\d{2}\]|\(\d{2}:\d{2}\)|話者[A-Z]:|Speaker [A-Z]:)/.test(text);
     
+    console.log('Text analysis:', { isMarkdown, isTranscription, createSummary });
+    
     let prompt;
     
     if (isMarkdown) {
+      console.log('Text is already markdown, returning as-is');
       return { 
         success: true, 
         result: text,
         isMarkdown: true
       };
     } else if (isTranscription && createSummary) {
+      console.log('Creating summary for transcription text');
       if (summaryPrompt) {
         prompt = `${summaryPrompt}\n\nテキスト:\n${text}`;
+        console.log('Using custom summary prompt');
       } else {
         prompt = `
           以下は音声書き起こしテキストです。このテキストを要約し、マークダウン形式で整形してください。
@@ -158,8 +171,10 @@ ipcMain.handle('convert-text', async (event, { text, createSummary, summaryPromp
           テキスト:
           ${text}
         `;
+        console.log('Using default summary prompt');
       }
     } else {
+      console.log('Converting regular text to markdown');
       prompt = `
         以下のテキストをマークダウン形式に変換してください。
         適切な見出し、箇条書き、強調などを使用して、読みやすく構造化されたマークダウンにしてください。
